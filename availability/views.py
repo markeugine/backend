@@ -12,7 +12,7 @@ class SetUnavailabilityViewSet(viewsets.ModelViewSet):
     """
     queryset = models.Unavailability.objects.all()
     serializer_class = serializers.SetUnavailabilitySerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         date = request.data.get("date")
