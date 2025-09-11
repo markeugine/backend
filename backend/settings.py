@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'user_auth',
     'appointment',
     'availability',
+    'image_generation',
 ]
 
 

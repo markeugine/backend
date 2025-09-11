@@ -108,3 +108,21 @@ class UserAppointmentsViewSet(viewsets.ViewSet):
         appointment = models.Appointment.objects.get(pk=pk, user=request.user)
         appointment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ManageDesignViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Design objects.
+    Only accessible to admin users.
+    """
+    queryset = models.Design.objects.all()
+    serializer_class = serializers.DesignSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class UserDesignsViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.DesignSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return models.Design.objects.filter(user=self.request.user)
