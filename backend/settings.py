@@ -33,6 +33,9 @@ INSTALLED_APPS = [
     'appointment',
     'availability',
     'image_generation',
+    'design_management',
+    'notifications',
+    'payments',
 ]
 
 
