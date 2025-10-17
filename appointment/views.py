@@ -2,6 +2,8 @@ from rest_framework import permissions, viewsets, status
 from rest_framework.response import Response
 from . import serializers
 from . import models
+from rest_framework.parsers import MultiPartParser, FormParser
+
 
 
 class SetAppointmentViewSet(viewsets.ViewSet):
@@ -10,6 +12,7 @@ class SetAppointmentViewSet(viewsets.ViewSet):
     """
     serializer_class = serializers.AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser] 
 
     def create(self, request, *args, **kwargs):
         """
@@ -35,38 +38,34 @@ class SetAppointmentViewSet(viewsets.ViewSet):
             )
 
 
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
+from . import models, serializers
+
+
 class AppointmentsListViewSet(viewsets.ViewSet):
-    """
-    Admin-only ViewSet for listing all appointments and partially updating any appointment.
-    """
     permission_classes = [permissions.IsAdminUser]
 
     def list(self, request):
-        """
-        Return a list of all appointments.
-        """
         appointments = models.Appointment.objects.all()
-        serializer = serializers.AppointmentSerializer(appointments, many=True)
+        serializer = serializers.AppointmentSerializer(appointments, many=True, context={'request': request})
         return Response(serializer.data)
-    
+
     def partial_update(self, request, pk=None):
-        """
-        Partially update an appointment by ID.
-        Only accessible to admins.
-        """
         try:
             appointment = models.Appointment.objects.get(pk=pk)
         except models.Appointment.DoesNotExist:
-            return Response(
-                {"detail": "Appointment not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = serializers.AppointmentSerializer(appointment, data=request.data, partial=True)
+        serializer = serializers.AppointmentSerializer(
+            appointment, data=request.data, partial=True, context={'request': request}
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
 class UserAppointmentsViewSet(viewsets.ViewSet):

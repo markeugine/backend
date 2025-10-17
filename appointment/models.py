@@ -32,11 +32,9 @@ class Appointment(models.Model):
         related_name='appointments'
     )
 
-    date = models.DateField()  # Date of the appointment (e.g., 2025-05-14)
-    time = models.CharField(max_length=255, null=True, blank=True)  # Optional time or slot description
+    date = models.DateField() 
+    time = models.CharField(max_length=255, null=True, blank=True)  
     image = models.ImageField(upload_to='appointment_images/', null=True, blank=True)
-    address = models.TextField(max_length=500, null=True, blank=True)
-    facebook_link = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(max_length=500, null=True, blank=True)
     appointment_status = models.CharField(
         max_length=20,
@@ -66,6 +64,14 @@ class Appointment(models.Model):
     def phone_number(self):
         """Return the phone number of the user who created the appointment."""
         return self.user.phone_number  
+    
+    @property
+    def address(self):
+        return self.user.address
+
+    @property
+    def facebook_link(self):
+        return self.user.facebook_link
     
     def __str__(self):
         """Return a human-readable string representation of the appointment."""

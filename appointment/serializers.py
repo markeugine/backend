@@ -10,12 +10,23 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     The 'user' field is read-only and automatically set when creating appointments.
     """
-    email = serializers.EmailField(source='user.email', read_only=True)
-    first_name = serializers.CharField(source='user.first_name', read_only=True)
-    last_name = serializers.CharField(source='user.last_name', read_only=True)
-    phone_number = serializers.CharField(source='user.phone_number', read_only=True)
+    email = serializers.ReadOnlyField(source='user.email')
+    first_name = serializers.ReadOnlyField(source='user.first_name')
+    last_name = serializers.ReadOnlyField(source='user.last_name')
+    phone_number = serializers.ReadOnlyField(source='user.phone_number')
+    address = serializers.ReadOnlyField(source='user.address')
+    facebook_link = serializers.ReadOnlyField(source='user.facebook_link')
+    image = serializers.ImageField(required=False, allow_null=True)
+
 
     class Meta:
         model = models.Appointment
         fields = '__all__'
         read_only_fields = ['user']
+
+    def get_image(self, obj):
+        """Return full image URL (not just path)."""
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return None
