@@ -98,6 +98,14 @@ class AllUserViewSet(viewsets.ViewSet):
         # Serialize all users
         serializer = serializers.UserInfoSerializer(queryset, many=True)
         return Response(serializer.data)
+    
+    def retrieve(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk)
+            serializer = serializers.UserInfoSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
 
 
 # ViewSet to return the authenticated user's profile info

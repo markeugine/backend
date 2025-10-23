@@ -60,6 +60,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
             'last_name',
             'address',
             'facebook_link',
+            'phone_number',
             'is_staff',
             'is_superuser',
         ]

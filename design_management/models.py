@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
-
+from django.utils import timezone
+from django.core.files.storage import default_storage
 
 # Create your models here.
 class Design(models.Model):
@@ -71,6 +72,35 @@ class Design(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+    updates = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of updates or progress logs related to this design. Each entry includes message, image, and process status."
+    )
+
+    def add_update(self, message, process_status=None, image_file=None):
+        """
+        Add an update entry with optional image and process status.
+        """
+        image_url = None
+
+        # Save the uploaded image if provided
+        if image_file:
+            image_path = default_storage.save(f"design_updates/{image_file.name}", image_file)
+            image_url = default_storage.url(image_path)
+
+        update_entry = {
+            "message": message,
+            "process_status": process_status or self.process_status,
+            "image": image_url,
+            "timestamp": timezone.now().isoformat(),
+        }
+
+        self.updates.append(update_entry)
+        self.save()
+
 
     @property
     def email(self):

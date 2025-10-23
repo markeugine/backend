@@ -64,6 +64,14 @@ class AppointmentsListViewSet(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def retrieve(self, request, pk=None):
+        try:
+            appointment = models.Appointment.objects.get(pk=pk)
+        except models.Appointment.DoesNotExist:
+            return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = serializers.AppointmentSerializer(appointment, context={'request': request})
+        return Response(serializer.data)
 
 
 

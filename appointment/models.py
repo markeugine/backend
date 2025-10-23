@@ -24,6 +24,7 @@ class Appointment(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('cancelled', 'Cancelled'),
+        ('done', 'Done'),
     ]
 
     user = models.ForeignKey(
