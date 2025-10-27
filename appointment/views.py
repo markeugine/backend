@@ -38,11 +38,6 @@ class SetAppointmentViewSet(viewsets.ViewSet):
             )
 
 
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
-from . import models, serializers
-
-
 class AppointmentsListViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAdminUser]
 
