@@ -22,9 +22,9 @@ class Appointment(models.Model):
     APPOINTMENT_STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
+        ('denied', 'Denied'),
         ('cancelled', 'Cancelled'),
-        ('done', 'Done'),
+        ('archived', 'Archived'),
     ]
 
     user = models.ForeignKey(
@@ -80,3 +80,40 @@ class Appointment(models.Model):
 
     class Meta:
         ordering = ['-updated_at']
+
+
+class FollowUpAppointment(models.Model):
+    FOLLOW_UP_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('successful', 'Successful'),
+        ('unsuccessful', 'Unsuccessful')
+    ]
+    CLIENT_RESPONSE_CHOICES = [
+        ('none', 'None'),
+        ('agreed', 'Agreed'),
+        ('disagreed', 'Disagreed'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='follow_up',
+        null=True, blank=True
+    )
+    admin_note = models.TextField(null=True, blank=True)
+    for_fitting = models.BooleanField(default=False)
+    date = models.DateField() 
+    time = models.CharField()
+    status = models.CharField(
+        max_length=20,  
+        choices=FOLLOW_UP_STATUS_CHOICES,
+        default='pending'
+    )
+    project_id = models.CharField(blank=True, null=True)
+    client_response = models.CharField(
+        max_length=20,
+        choices=CLIENT_RESPONSE_CHOICES,
+        default='none'
+    )
+    client_note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)

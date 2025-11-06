@@ -30,3 +30,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
         if obj.image and hasattr(obj.image, 'url'):
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return None
+    
+
+class FollowUpAppointmentSerializer(serializers.ModelSerializer):
+    """Basic serializer for FollowUpAppointment model."""
+    
+    class Meta:
+        model = models.FollowUpAppointment
+        fields = '__all__'
+        read_only_fields = ['created_at']

@@ -110,5 +110,21 @@ class UserAppointmentsViewSet(viewsets.ViewSet):
         appointment = models.Appointment.objects.get(pk=pk, user=request.user)
         appointment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+class FollowUpAppointmentViewSet(viewsets.ModelViewSet):
+    """
+    Simple ViewSet for creating, editing, and listing follow-up appointments.
+    """
+    queryset = models.FollowUpAppointment.objects.all()
+    serializer_class = serializers.FollowUpAppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Ensure only admins can assign other users
+        if not self.request.user.is_staff:
+            serializer.save(user=self.request.user)
+        else:
+            serializer.save()
 
 

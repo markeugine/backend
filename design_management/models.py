@@ -4,12 +4,6 @@ from django.utils import timezone
 from django.core.files.storage import default_storage
 
 class Design(models.Model):
-    """
-    Model representing a design project for an approved appointment.
-    Automatically calculates balance and payment status when created
-    or when payments are added.
-    """
-
     PROCESS_STATUS_CHOICES = [
         ('designing', 'Designing'),
         ('materializing', 'Materializing'),
@@ -68,84 +62,66 @@ class Design(models.Model):
     )
 
     description = models.TextField(blank=True, null=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     updates = models.JSONField(
         default=list,
         blank=True,
-        help_text=(
-            "List of updates or progress logs related to this design. "
-            "Each entry includes: message, process_status, payment_status, "
-            "amount_paid, added_payment, balance, image, and timestamp."
-        )
+        help_text="List of updates or progress logs related to this design."
     )
 
     def save(self, *args, **kwargs):
-        """Automatically update balance and payment status when saving."""
-        self.balance = self.total_amount - self.amount_paid
+        """
+        Automatically recalculate balance and set payment status whenever saved.
+        """
+        # Ensure numeric values are valid
+        self.amount_paid = self.amount_paid or 0
+        self.total_amount = self.total_amount or 0
 
-        # ✅ Ensure full payment when balance == 0
+        # Compute balance
+        self.balance = max(self.total_amount - self.amount_paid, 0)
+
+        # ✅ Automatically determine payment status
         if self.amount_paid <= 0:
             self.payment_status = 'no_payment'
-        elif self.balance == 0:
-            self.payment_status = 'fully_paid'
-        else:
+        elif self.amount_paid < self.total_amount:
             self.payment_status = 'partial_payment'
+        else:
+            self.payment_status = 'fully_paid'
 
         super().save(*args, **kwargs)
 
     def add_update(self, message, process_status=None, payment_status=None, amount_paid=None, image_file=None):
-        """Add a progress update with optional payment and image."""
+        """
+        Add a progress update with optional payment and image.
+        Automatically updates payment fields and logs the change.
+        """
         image_url = None
-
         if image_file:
             image_path = default_storage.save(f"design_updates/{image_file.name}", image_file)
             image_url = default_storage.url(image_path)
 
-        if process_status is None:
-            process_status = self.process_status
-        if payment_status is None:
-            payment_status = self.payment_status
+        if amount_paid:
+            self.amount_paid += amount_paid  # cumulative update
 
-        # ✅ Add payment cumulatively
-        if amount_paid is not None:
-            new_total_paid = self.amount_paid + amount_paid
-        else:
-            new_total_paid = self.amount_paid
+        # Save automatically recalculates payment status & balance
+        self.save()
 
-        # ✅ Compute new balance
-        new_balance = self.total_amount - new_total_paid
-
-        # ✅ Fix: handle full payment when balance == 0
-        if new_total_paid <= 0:
-            payment_status = 'no_payment'
-        elif new_balance == 0:
-            payment_status = 'fully_paid'
-        else:
-            payment_status = 'partial_payment'
-
-        # Create update log entry
         update_entry = {
             "message": message,
-            "process_status": process_status,
-            "payment_status": payment_status,
-            "amount_paid_total": str(new_total_paid),
+            "process_status": process_status or self.process_status,
+            "payment_status": self.payment_status,
+            "amount_paid_total": str(self.amount_paid),
             "added_payment": str(amount_paid or 0.00),
-            "balance": str(new_balance),
+            "balance": str(self.balance),
             "image": image_url,
             "timestamp": timezone.now().isoformat(),
         }
 
         self.updates.append(update_entry)
-
-        # Update instance
-        self.process_status = process_status
-        self.payment_status = payment_status
-        self.amount_paid = new_total_paid
-        self.balance = new_balance
-        self.save()
+        self.process_status = process_status or self.process_status
+        self.save(update_fields=["updates", "process_status", "payment_status", "amount_paid", "balance"])
 
     @property
     def email(self):
