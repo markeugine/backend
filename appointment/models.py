@@ -27,12 +27,22 @@ class Appointment(models.Model):
         ('archived', 'Archived'),
     ]
 
+    APPOINTMENT_TYPE_CHOICES = [
+        ('fitting', 'Fitting'),
+        ('inquiry', 'Inquiry')
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='appointments'
     )
 
+    appointment_type = models.CharField(
+        max_length=20,
+        choices=APPOINTMENT_TYPE_CHOICES,
+        default='inquiry'
+    )
     date = models.DateField() 
     time = models.CharField(max_length=255, null=True, blank=True)  
     image = models.ImageField(upload_to='appointment_images/', null=True, blank=True)

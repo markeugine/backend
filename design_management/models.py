@@ -28,9 +28,11 @@ class Design(models.Model):
         on_delete=models.CASCADE,
         related_name='design'
     )
-
     attire_type = models.CharField(max_length=100)
     targeted_date = models.DateField()
+    fitting_date = models.DateField(null=True, blank=True)
+    fitting_time = models.CharField(null=True, blank=True)
+    fitting_successful = models.BooleanField(default=False)
     process_status = models.CharField(
         max_length=20,
         choices=PROCESS_STATUS_CHOICES,
