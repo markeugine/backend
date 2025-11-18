@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'design_management',
     'notifications',
     'payments',
+    'message',
+    'gallery'
 ]
 
 
