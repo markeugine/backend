@@ -2,5 +2,5 @@ from . import views
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
-router.register('image', views.ImageGenerationViewset, basename='image')
+router.register('generate', views.ImageGenerationViewset, basename='generate')
 urlpatterns = router.urls
