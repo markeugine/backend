@@ -3,28 +3,44 @@ from . import models
 
 
 class SetUnavailabilitySerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating or updating unavailability entries.
-    Includes specific fields relevant for setting unavailability slots.
-    """
+    DEFAULT_REASON = "Designer not available"
+    AVAILABLE_REASON = "Available"
+
     class Meta:
         model = models.Unavailability
-        fields = [
-            'id',
-            'date',
-            'slot_one',
-            'slot_two',
-            'slot_three',
-            'slot_four',
-            'slot_five',
+        fields = '__all__'
+
+    def validate(self, data):
+        slot_reason_pairs = [
+            ("slot_one", "reason_one"),
+            ("slot_two", "reason_two"),
+            ("slot_three", "reason_three"),
+            ("slot_four", "reason_four"),
+            ("slot_five", "reason_five"),
         ]
+
+        for slot, reason in slot_reason_pairs:
+            slot_value = data.get(slot)
+            reason_value = data.get(reason)
+
+            # Slot unavailable → must have a valid reason
+            if slot_value:
+                if not reason_value or reason_value == "" or reason_value == self.AVAILABLE_REASON:
+                    data[reason] = self.DEFAULT_REASON
+
+            # Slot available → force reason = "Available"
+            else:
+                data[reason] = self.AVAILABLE_REASON
+
+        return data
 
 
 class DisplayUnavailabilitySerializer(serializers.ModelSerializer):
     """
     Serializer for displaying unavailability records.
-    All fields from the model are included and set as read-only.
+    All fields are read-only.
     """
+
     class Meta:
         model = models.Unavailability
         fields = '__all__'
