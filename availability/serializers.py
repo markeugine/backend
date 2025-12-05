@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from . import models
 
-
 class SetUnavailabilitySerializer(serializers.ModelSerializer):
     DEFAULT_REASON = "Designer not available"
     AVAILABLE_REASON = "Available"
@@ -27,8 +26,6 @@ class SetUnavailabilitySerializer(serializers.ModelSerializer):
             if slot_value:
                 if not reason_value or reason_value == "" or reason_value == self.AVAILABLE_REASON:
                     data[reason] = self.DEFAULT_REASON
-
-            # Slot available → force reason = "Available"
             else:
                 data[reason] = self.AVAILABLE_REASON
 
@@ -36,11 +33,6 @@ class SetUnavailabilitySerializer(serializers.ModelSerializer):
 
 
 class DisplayUnavailabilitySerializer(serializers.ModelSerializer):
-    """
-    Serializer for displaying unavailability records.
-    All fields are read-only.
-    """
-
     class Meta:
         model = models.Unavailability
         fields = '__all__'

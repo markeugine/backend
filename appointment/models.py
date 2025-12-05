@@ -47,6 +47,7 @@ class Appointment(models.Model):
     time = models.CharField(max_length=255, null=True, blank=True)  
     image = models.ImageField(upload_to='appointment_images/', null=True, blank=True)
     description = models.TextField(max_length=500, null=True, blank=True)
+    not_come = models.BooleanField(default=False,null=True)
     appointment_status = models.CharField(
         max_length=20,
         choices=APPOINTMENT_STATUS_CHOICES,

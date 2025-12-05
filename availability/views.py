@@ -2,12 +2,7 @@ from rest_framework import permissions, viewsets, status
 from rest_framework.response import Response
 from . import serializers, models
 
-
 class SetUnavailabilityViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for creating, updating, or deleting unavailability records.
-    Automatically deletes the record if all slots are False (available).
-    """
     queryset = models.Unavailability.objects.all()
     serializer_class = serializers.SetUnavailabilitySerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -64,9 +59,7 @@ class SetUnavailabilityViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(
-            instance, data=request.data, partial=True
-        )
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -81,10 +74,6 @@ class SetUnavailabilityViewSet(viewsets.ModelViewSet):
 
 
 class DisplayUnavailabilityViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for retrieving unavailability records.
-    Supports optional filtering by date.
-    """
     queryset = models.Unavailability.objects.all()
     serializer_class = serializers.DisplayUnavailabilitySerializer
     permission_classes = [permissions.IsAuthenticated]
