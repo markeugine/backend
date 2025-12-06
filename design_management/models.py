@@ -43,7 +43,6 @@ class Design(models.Model):
         choices=PAYMENT_STATUS_CHOICES,
         default='no_payment'
     )
-
     total_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,

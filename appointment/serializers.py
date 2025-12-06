@@ -18,7 +18,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
     facebook_link = serializers.ReadOnlyField(source='user.facebook_link')
     image = serializers.ImageField(required=False, allow_null=True)
 
-
     class Meta:
         model = models.Appointment
         fields = '__all__'

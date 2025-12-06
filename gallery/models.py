@@ -16,6 +16,7 @@ class Attire(models.Model):
         blank=True,
         null=True
     )
+    
 
     attire_name = models.CharField(max_length=255)
     attire_type = models.CharField(max_length=255)

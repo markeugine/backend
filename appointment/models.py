@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-
+from gallery.models import Attire
 
 class Appointment(models.Model):
     """
@@ -31,6 +31,14 @@ class Appointment(models.Model):
         ('fitting', 'Fitting'),
         ('inquiry', 'Inquiry')
     ]
+
+    attire_from_gallery = models.ForeignKey(
+        Attire,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='appointments'
+    )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
