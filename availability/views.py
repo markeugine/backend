@@ -88,7 +88,3 @@ class DisplayUnavailabilityViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
-
-class Test(viewsets.ViewSet):
-    pass 
