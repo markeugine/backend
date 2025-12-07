@@ -2,7 +2,15 @@ from rest_framework import permissions, viewsets, status
 from rest_framework.response import Response
 from . import serializers
 from . import models
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+class UserAppointmentsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for authenticated users to manage their own appointments.
+    Supports listing, partial updating, and deleting.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]  # ✅ Add JSONParser
 
 
 
@@ -67,9 +75,7 @@ class AppointmentsListViewSet(viewsets.ViewSet):
             return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = serializers.AppointmentSerializer(appointment, context={'request': request})
         return Response(serializer.data)
-
-
-
+    
 
 class UserAppointmentsViewSet(viewsets.ViewSet):
     """
@@ -77,6 +83,7 @@ class UserAppointmentsViewSet(viewsets.ViewSet):
     Supports listing, partial updating, and deleting.
     """
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser] 
 
     def list(self, request):
         """
@@ -88,16 +95,18 @@ class UserAppointmentsViewSet(viewsets.ViewSet):
         return Response(serializer.data)
         
     def partial_update(self, request, pk=None):
-        """
-        Partially update an appointment owned by the authenticated user.
-        Prevents updating the 'appointment_status' field.
-        """
-        appointment = models.Appointment.objects.get(pk=pk, user=request.user)
+        try:
+            appointment = models.Appointment.objects.get(pk=pk, user=request.user)
+        except models.Appointment.DoesNotExist:
+            return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        # Make a mutable copy of request data and remove 'appointment_status'
-        data = request.data.copy()
-
-        serializer = serializers.AppointmentSerializer(appointment, data=data, partial=True)
+        # Use request.data directly - don't copy it when files are present
+        serializer = serializers.AppointmentSerializer(
+            appointment, 
+            data=request.data,  # ✅ Use directly, no .copy()
+            partial=True,
+            context={'request': request}
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

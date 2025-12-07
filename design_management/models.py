@@ -5,10 +5,20 @@ from django.core.files.storage import default_storage
 
 class Design(models.Model):
     PROCESS_STATUS_CHOICES = [
-        ('designing', 'Designing'),
-        ('materializing', 'Materializing'),
-        ('ready', 'Ready'),
-        ('done', 'Done'),
+        ('concept', 'Concept'),                # Initial idea or moodboard stage
+        ('sketching', 'Sketching'),            # Hand-drawn or digital sketches
+        ('designing', 'Designing'),            # Creating the detailed design
+        ('material_selection', 'Material Selection'),  # Choosing fabrics, trims, etc.
+        ('pattern_making', 'Pattern Making'),  # Drafting patterns from design
+        ('cutting', 'Cutting'),                # Cutting fabrics according to patterns
+        ('sewing', 'Sewing'),                  # Stitching pieces together
+        ('materializing', 'Materializing'),    # Constructing the garment
+        ('fitting', 'Fitting'),                # Initial fitting with client
+        ('alterations', 'Alterations'),        # Adjustments based on fitting
+        ('final_fitting', 'Final Fitting'),    # Last fitting before completion
+        ('ready', 'Ready'),                     # Garment completed
+        ('picked_up', 'Picked up'),            # Handed over to client
+        ('done', 'Done'),                       # Final archive/completion
     ]
 
     PAYMENT_STATUS_CHOICES = [

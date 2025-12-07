@@ -39,7 +39,7 @@ class AttireUserViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = AttireSerializer
-    permission_classes = [permissions.IsAuthenticated]  # or IsAuthenticated if needed
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Attire.objects.filter(

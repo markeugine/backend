@@ -24,6 +24,7 @@ class Appointment(models.Model):
         ('approved', 'Approved'),
         ('denied', 'Denied'),
         ('cancelled', 'Cancelled'),
+        ('project', 'Project'),
         ('archived', 'Archived'),
     ]
 
