@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import BaseUserManager
+from django.utils import timezone
+from datetime import timedelta
+import random
 
 
 class CustomUserManager(BaseUserManager):
@@ -47,3 +50,31 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+# NEW MODEL - Add this to your existing models.py
+class EmailOTP(models.Model):
+    """
+    Model to store OTP codes for email verification.
+    OTPs expire after 10 minutes.
+    """
+    email = models.EmailField(max_length=250)
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.email} - {self.otp_code}"
+    
+    def is_valid(self):
+        """Check if OTP is still valid (not expired and not used)"""
+        expiry_time = self.created_at + timedelta(minutes=10)
+        return timezone.now() < expiry_time and not self.is_verified
+    
+    @staticmethod
+    def generate_otp():
+        """Generate a random 6-digit OTP"""
+        return str(random.randint(100000, 999999))

@@ -1,18 +1,142 @@
 from rest_framework import permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from knox.models import AuthToken
 from django.contrib.auth import get_user_model, authenticate
+from django.core.mail import send_mail
+from django.conf import settings
 from . import serializers
+from .models import EmailOTP
 
 # Retrieve the custom user model
 User = get_user_model()
 
 
+# NEW VIEWSET - Add this
+class SendOTPViewSet(viewsets.ViewSet):
+    """
+    ViewSet to send OTP to user's email.
+    Step 1 of registration process.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def create(self, request):
+        serializer = serializers.SendOTPSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = serializer.validated_data['email']
+        
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'error': 'User with this email already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate OTP
+        otp_code = EmailOTP.generate_otp()
+        
+        # Save OTP to database
+        EmailOTP.objects.create(email=email, otp_code=otp_code)
+        
+        # Send email with OTP
+        try:
+            subject = 'Your Verification Code'
+            message = f'''
+Hello,
+
+Your verification code is: {otp_code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, please ignore this email.
+
+Best regards,
+Your App Team
+            '''
+            
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            
+            return Response({
+                'message': 'OTP sent successfully to your email',
+                'email': email
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to send email: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def list(self, request):
+        return Response({"detail": "Please POST email to send OTP."})
+
+
+# NEW VIEWSET - Add this
+class VerifyOTPViewSet(viewsets.ViewSet):
+    """
+    ViewSet to verify OTP code.
+    Step 2 of registration process.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def create(self, request):
+        serializer = serializers.VerifyOTPSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = serializer.validated_data['email']
+        otp_code = serializer.validated_data['otp_code']
+        
+        try:
+            # Get the latest OTP for this email
+            otp = EmailOTP.objects.filter(
+                email=email,
+                otp_code=otp_code
+            ).latest('created_at')
+            
+            # Check if OTP is valid
+            if not otp.is_valid():
+                return Response(
+                    {'error': 'OTP has expired or already been used'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Mark OTP as verified
+            otp.is_verified = True
+            otp.save()
+            
+            return Response({
+                'message': 'OTP verified successfully',
+                'email': email,
+                'verified': True
+            }, status=status.HTTP_200_OK)
+            
+        except EmailOTP.DoesNotExist:
+            return Response(
+                {'error': 'Invalid OTP code'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    def list(self, request):
+        return Response({"detail": "Please POST email and OTP code to verify."})
+
+
 class RegisterViewset(viewsets.ViewSet):
     """
     ViewSet for handling user registration.
-    Allows any user to send a POST request to register a new account.
+    Step 3 - Final registration after OTP verification.
+    Requires verified OTP before creating account.
     """
     permission_classes = [permissions.AllowAny]
     serializer_class = serializers.RegisterSerializer
@@ -20,19 +144,30 @@ class RegisterViewset(viewsets.ViewSet):
     def create(self, request):
         """
         Handles POST requests for registering a user.
-        Validates and saves the user data.
+        Validates OTP and saves the user data.
         """
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             # Save new user to the database
-            serializer.save()
-            return Response(serializer.data)
+            user = serializer.save()
+            
+            # Generate auth token using knox
+            _, token = AuthToken.objects.create(user)
+            
+            # Serialize user data for response
+            user_data = serializers.UserInfoSerializer(user).data
+            
+            return Response({
+                'message': 'Registration successful',
+                'user': user_data,
+                'token': token
+            }, status=status.HTTP_201_CREATED)
+        
         # Return validation errors if any
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # To avoid the 405 - Method Not Allowed error.
     def list(self, request):
-        return Response({"detail": "Please REGISTRATION credentials here."})
+        return Response({"detail": "Please POST registration credentials here."})
 
 
 class LoginViewset(viewsets.ViewSet):
@@ -78,7 +213,6 @@ class LoginViewset(viewsets.ViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-    # To avoid the 405 - Method Not Allowed error.
     def list(self, request):
         return Response({"detail": "Please POST your login credentials here."})
 
@@ -108,7 +242,6 @@ class AllUserViewSet(viewsets.ViewSet):
             return Response({'error': 'User not found'}, status=404)
 
 
-# ViewSet to return the authenticated user's profile info
 class UserProfileViewSet(viewsets.ViewSet):
     """
     ViewSet to return the authenticated user's profile information.
