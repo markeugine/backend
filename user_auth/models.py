@@ -42,6 +42,9 @@ class CustomUser(AbstractUser):
 
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     facebook_link = models.CharField(max_length=500, null=True, blank=True)
+    
+    has_messurements = models.BooleanField(default=False)
+    cancels = models.IntegerField(default=0)
 
     objects = CustomUserManager()
 

@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'notifications',
     'payments',
     'message',
-    'gallery'
+    'gallery',
+    'user_information'
 ]
 
 

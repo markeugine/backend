@@ -1,57 +1,46 @@
+from django.utils import timezone
 from rest_framework import permissions, viewsets, status
 from rest_framework.response import Response
-from . import serializers
-from . import models
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from . import serializers, models
 
-class UserAppointmentsViewSet(viewsets.ViewSet):
-    """
-    ViewSet for authenticated users to manage their own appointments.
-    Supports listing, partial updating, and deleting.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser, JSONParser]  # ✅ Add JSONParser
 
+def auto_archive_expired():
+    today = timezone.now().date()
+    models.Appointment.objects.filter(
+        appointment_status='pending',
+        date__lt=today
+    ).update(appointment_status='archived')
 
 
 class SetAppointmentViewSet(viewsets.ViewSet):
-    """
-    ViewSet to allow authenticated users to create new appointments.
-    """
     serializer_class = serializers.AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser] 
+    parser_classes = [MultiPartParser, FormParser]
 
     def create(self, request, *args, **kwargs):
-        """
-        Create a new appointment for the authenticated user.
-        
-        Expects appointment data in request.data.
-        Returns success message or validation errors.
-        """
         serializer = self.serializer_class(data=request.data)
-        
-        if serializer.is_valid():
-            # Save the appointment linked to the current user
-            serializer.save(user=request.user)
 
+        if serializer.is_valid():
+            serializer.save(user=request.user)
             return Response(
                 {"message": "Appointment created successfully"},
                 status=status.HTTP_201_CREATED
             )
-        else:
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AppointmentsListViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAdminUser]
 
     def list(self, request):
+        # ✅ Auto archive before sending data
+        auto_archive_expired()
+
         appointments = models.Appointment.objects.all()
-        serializer = serializers.AppointmentSerializer(appointments, many=True, context={'request': request})
+        serializer = serializers.AppointmentSerializer(
+            appointments, many=True, context={'request': request}
+        )
         return Response(serializer.data)
 
     def partial_update(self, request, pk=None):
@@ -67,73 +56,133 @@ class AppointmentsListViewSet(viewsets.ViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def retrieve(self, request, pk=None):
         try:
             appointment = models.Appointment.objects.get(pk=pk)
         except models.Appointment.DoesNotExist:
             return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = serializers.AppointmentSerializer(appointment, context={'request': request})
+
+        serializer = serializers.AppointmentSerializer(
+            appointment, context={'request': request}
+        )
         return Response(serializer.data)
-    
+
 
 class UserAppointmentsViewSet(viewsets.ViewSet):
-    """
-    ViewSet for authenticated users to manage their own appointments.
-    Supports listing, partial updating, and deleting.
-    """
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser, JSONParser] 
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def list(self, request):
-        """
-        List all appointments belonging to the authenticated user.
-        """
+        # ✅ Auto archive before fetching user's data
+        auto_archive_expired()
+
         user = request.user
         appointments = models.Appointment.objects.filter(user=user)
         serializer = serializers.AppointmentSerializer(appointments, many=True)
         return Response(serializer.data)
-        
+
     def partial_update(self, request, pk=None):
         try:
             appointment = models.Appointment.objects.get(pk=pk, user=request.user)
         except models.Appointment.DoesNotExist:
             return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Use request.data directly - don't copy it when files are present
+
+        # 🔥 CAPTURE OLD STATUS BEFORE UPDATE
+        old_status = appointment.appointment_status
+        new_status = request.data.get('appointment_status')
+
+        # Update the appointment
         serializer = serializers.AppointmentSerializer(
-            appointment, 
-            data=request.data,  # ✅ Use directly, no .copy()
+            appointment,
+            data=request.data,
             partial=True,
             context={'request': request}
         )
+        
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            
+            # 🔥 INCREMENT CANCEL COUNTER IF APPROVED APPOINTMENT IS CANCELLED
+            user_cancels = None
+            if new_status == 'cancelled' and old_status == 'approved':
+                user = request.user
+                user.cancels += 1
+                user.save(update_fields=['cancels'])
+                user_cancels = user.cancels
+            
+            # Prepare response
+            response_data = serializer.data
+            
+            # Add cancel count to response if it was incremented
+            if user_cancels is not None:
+                response_data['user_cancels'] = user_cancels
+            
+            return Response(response_data)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, pk=None):
-        """
-        Delete an appointment owned by the authenticated user.
-        """
         appointment = models.Appointment.objects.get(pk=pk, user=request.user)
         appointment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
 
 class FollowUpAppointmentViewSet(viewsets.ModelViewSet):
-    """
-    Simple ViewSet for creating, editing, and listing follow-up appointments.
-    """
     queryset = models.FollowUpAppointment.objects.all()
     serializer_class = serializers.FollowUpAppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        # Ensure only admins can assign other users
         if not self.request.user.is_staff:
             serializer.save(user=self.request.user)
         else:
             serializer.save()
 
 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+import csv
+from django.http import HttpResponse
+from .models import Appointment
+
+
+class ExportAppointmentsCSV(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="appointments.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "ID", "Email", "First Name", "Last Name", "Phone Number",
+            "Address", "Facebook Link", "Appointment Type", "Date", "Time",
+            "Description", "Not Come", "Attire From Gallery", "Status",
+            "Created At", "Updated At", "Image URL"
+        ])
+
+        for a in Appointment.objects.all():
+            writer.writerow([
+                a.id,
+                a.email,
+                a.first_name,
+                a.last_name,
+                a.phone_number,
+                a.address,
+                a.facebook_link,
+                a.appointment_type,
+                a.date,
+                a.time,
+                a.description,
+                a.not_come,
+                a.attire_from_gallery.id if a.attire_from_gallery else "",
+                a.appointment_status,
+                a.created_at,
+                a.updated_at,
+                a.image.url if a.image else ""
+            ])
+
+        return response

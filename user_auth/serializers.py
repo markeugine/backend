@@ -23,7 +23,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     """
     Serializer for registering a new user. Handles validation and user creation.
     """
-    otp_code = serializers.CharField(max_length=6, min_length=6, write_only=True)  # NEW FIELD
+    otp_code = serializers.CharField(max_length=6, min_length=6, write_only=True)
     
     class Meta:
         model = User
@@ -31,16 +31,19 @@ class RegisterSerializer(serializers.ModelSerializer):
             'id',
             'email',
             'password',
-            'otp_code',  # NEW FIELD
+            'otp_code',
             'username',
             'first_name',
             'last_name',
             'address',
             'phone_number',
             'facebook_link',
+            'has_messurements',
+            'cancels'  # Added
         ]
         extra_kwargs = {
-            'password': {'write_only': True}  
+            'password': {'write_only': True},
+            'cancels': {'read_only': True}  # Should not be set during registration
         }
 
     def validate(self, data):
@@ -108,5 +111,31 @@ class UserInfoSerializer(serializers.ModelSerializer):
             'phone_number',
             'is_staff',
             'is_superuser',
+            'has_messurements',
+            'cancels'  # Added
         ]
         read_only_fields = fields
+
+
+class UpdateUserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user information.
+    Allows users to update their profile details.
+    """
+    class Meta:
+        model = User
+        fields = [
+            'username',
+            'first_name',
+            'last_name',
+            'address',
+            'phone_number',
+            'facebook_link',
+        ]
+        
+    def update(self, instance, validated_data):
+        """Update and return the user instance"""
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance

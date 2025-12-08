@@ -13,7 +13,6 @@ from .models import EmailOTP
 User = get_user_model()
 
 
-# NEW VIEWSET - Add this
 class SendOTPViewSet(viewsets.ViewSet):
     """
     ViewSet to send OTP to user's email.
@@ -55,7 +54,7 @@ This code will expire in 10 minutes.
 If you didn't request this code, please ignore this email.
 
 Best regards,
-Your App Team
+Ramil Estrope
             '''
             
             send_mail(
@@ -81,7 +80,6 @@ Your App Team
         return Response({"detail": "Please POST email to send OTP."})
 
 
-# NEW VIEWSET - Add this
 class VerifyOTPViewSet(viewsets.ViewSet):
     """
     ViewSet to verify OTP code.
@@ -234,17 +232,20 @@ class AllUserViewSet(viewsets.ViewSet):
         return Response(serializer.data)
     
     def retrieve(self, request, pk=None):
+        """
+        Handles GET requests to return a specific user by ID.
+        """
         try:
             user = User.objects.get(pk=pk)
             serializer = serializers.UserInfoSerializer(user)
             return Response(serializer.data)
         except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=404)
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UserProfileViewSet(viewsets.ViewSet):
     """
-    ViewSet to return the authenticated user's profile information.
+    ViewSet to return and update the authenticated user's profile information.
     Accessible only by logged-in users.
     """
     permission_classes = [permissions.IsAuthenticated]
@@ -257,3 +258,22 @@ class UserProfileViewSet(viewsets.ViewSet):
         # Serialize and return user's own info
         serializer = serializers.UserInfoSerializer(user)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['put', 'patch'])
+    def update_profile(self, request):
+        """
+        Handles PUT/PATCH requests to update the current user's profile.
+        """
+        user = request.user
+        serializer = serializers.UpdateUserSerializer(user, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            # Return updated user info
+            user_data = serializers.UserInfoSerializer(user).data
+            return Response({
+                'message': 'Profile updated successfully',
+                'user': user_data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

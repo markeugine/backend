@@ -36,8 +36,11 @@ class Design(models.Model):
     appointment = models.OneToOneField(
         'appointment.Appointment',
         on_delete=models.CASCADE,
-        related_name='design'
+        related_name='design',
+        blank=True,
+        null=True,
     )
+
     attire_type = models.CharField(max_length=100)
     targeted_date = models.DateField()
     fitting_date = models.DateField(null=True, blank=True)
