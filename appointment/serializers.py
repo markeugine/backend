@@ -38,3 +38,5 @@ class FollowUpAppointmentSerializer(serializers.ModelSerializer):
         model = models.FollowUpAppointment
         fields = '__all__'
         read_only_fields = ['created_at']
+
+
