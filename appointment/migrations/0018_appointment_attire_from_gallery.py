@@ -8,7 +8,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('appointment', '0017_appointment_not_come'),
-        ('gallery', '0002_attire_is_archived'),
     ]
 
     operations = [

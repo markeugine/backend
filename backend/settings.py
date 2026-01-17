@@ -35,10 +35,11 @@ INSTALLED_APPS = [
     'image_generation',
     'design_management',
     'notifications',
-    'payments',
+    # 'payments',
     'message',
     'gallery',
-    'user_information'
+    'user_information',
+    'testimonials',
 ]
 
 

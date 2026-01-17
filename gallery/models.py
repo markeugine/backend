@@ -17,11 +17,16 @@ class Attire(models.Model):
         null=True
     )
     
-
     attire_name = models.CharField(max_length=255)
     attire_type = models.CharField(max_length=255)
     attire_description = models.TextField()
     to_show = models.BooleanField(default=True)
+    landing_page = models.BooleanField(default=False)
+    total_price = models.CharField(
+        max_length=255,
+        default=None,
+        blank=True
+    )
 
     # Store images inside a folder named after the attire
     image1 = models.ImageField(upload_to=attire_image_upload_path, blank=True, null=True)

@@ -39,10 +39,9 @@ class AttireUserViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = AttireSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
         return Attire.objects.filter(
-            is_archived=False,
-            to_show=True
+            is_archived=False
         ).order_by('-created_at')
